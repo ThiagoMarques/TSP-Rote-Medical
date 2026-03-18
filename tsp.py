@@ -11,6 +11,23 @@ CITIES = [
 ]
 city_to_id = {coord: i for i, coord in enumerate(CITIES)}
 
+def distance(city1, city2):
+    """Distância em linha reta entre dois pontos (x, y)."""
+    return math.sqrt((city1[0] - city2[0])**2 + (city1[1] - city2[1])**2)
+
+def build_distance_matrix(cities):
+    """Matriz de distâncias entre todas as cidades."""
+    n = len(cities)
+    D = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = distance(cities[i], cities[j])
+            D[i][j] = D[j][i] = d
+    return D
+
+# Matriz de distâncias entre todas as cidades
+distance_matrix = build_distance_matrix(CITIES)
+
 HOSPITAL = CITIES[0]
 POPULATION_SIZE = 20
 
@@ -24,9 +41,15 @@ PRIORITIES = {0: 0, 1: 0, 2: 1, 3: 2, 4: 1}
 DEMANDS = {0: 0, 1: 3, 2: 2, 3: 1, 4: 2}
 VEHICLE_CAPACITY = 10
 
-def distance(city1, city2):
-    """Distância em linha reta entre dois pontos (x, y)."""
-    return math.sqrt((city1[0] - city2[0])**2 + (city1[1] - city2[1])**2)
+
+def total_distance_with_matrix(route, hospital, city_to_id, matrix):
+    hid = city_to_id[hospital]
+    ids = [city_to_id[c] for c in route]
+    dist = matrix[hid][ids[0]]
+    for i in range(len(ids) - 1):
+        dist += matrix[ids[i]][ids[i + 1]]
+    dist += matrix[ids[-1]][hid]
+    return dist
 
 def total_distance(path, start):
     """Distância total de um roteiro."""
@@ -79,7 +102,7 @@ def priority_penalty(route, city_to_id, priorities, hospital):
     return total
 
 def fitness(route, city_to_id, priorities, hospital, w_dist=0.3, w_prio=0.7):
-    d = total_distance(route, hospital)
+    d = total_distance_with_matrix(route, hospital, city_to_id, distance_matrix)
     p = priority_penalty(route, city_to_id, priorities, hospital)
     return w_dist * d + w_prio * p
 
@@ -89,7 +112,7 @@ def capacity_penalty(route, city_to_id, demands, capacity):
 
 def fitness(route, city_to_id, priorities, demands, capacity, hospital,
             w_dist=0.3, w_prio=0.5, w_cap=0.2):
-    d = total_distance(route, hospital)
+    d = total_distance_with_matrix(route, hospital, city_to_id, distance_matrix)
     p = priority_penalty(route, city_to_id, priorities, hospital)
     c = capacity_penalty(route, city_to_id, demands, capacity)
     print(f"Distância: {d:.2f}, Penalidade de prioridade: {p:.2f}, Penalidade de capacidade: {c:.2f}")
