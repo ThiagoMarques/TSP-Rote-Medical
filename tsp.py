@@ -1,4 +1,5 @@
 import math
+import random
 
 
 CITIES = [
@@ -10,6 +11,7 @@ CITIES = [
 ]
 
 HOSPITAL = CITIES[0]
+POPULATION_SIZE = 20
 
 def distance(city1, city2):
     """Distância em linha reta entre dois pontos (x, y)."""
@@ -25,21 +27,19 @@ def total_distance(path, start):
     d += distance(path[-1], start)
     return d
 
+def random_route():
+    """Roteiro aleatório entre as cidades."""
+    deliveries = CITIES[1:]
+    return random.sample(deliveries, len(deliveries))
+
 if __name__ == "__main__":
-    print(f"Cidades: {CITIES}"  , end="\n\n")
-    print(f"Hospital: {HOSPITAL}")
+    print("Cidades:", len(CITIES), "pontos")
+    print("Hospital:", HOSPITAL)
 
-    #Teste para uma rota = ordem 1,2,3,4
-    route = [CITIES[1], CITIES[2], CITIES[3], CITIES[4]]
-    print(f"Roteiro: {route}")
-    print(f"Distância total: {total_distance(route, HOSPITAL)}")
-
-    #Teste para uma rota = ordem 1,3,2,4
-    route = [CITIES[1], CITIES[3], CITIES[2], CITIES[4]]
-    print(f"Roteiro: {route}")
-    print(f"Distância total: {total_distance(route, HOSPITAL)}")
-
-    #Teste para uma rota = ordem 1,4,2,3
-    route = [CITIES[1], CITIES[4], CITIES[2], CITIES[3]]
-    print(f"Roteiro: {route}")
-    print(f"Distância total: {total_distance(route, HOSPITAL)}")
+    population = [random_route() for _ in range(POPULATION_SIZE)]
+    fitness_list = [total_distance(route, HOSPITAL) for route in population]
+    # Ordenar: menor distância = melhor (índice 0 = melhor)
+    sorted_pairs = sorted(zip(population, fitness_list), key=lambda p: p[1])
+    best_route, best_dist = sorted_pairs[0]
+    print("Melhor distância desta geração:", best_dist)
+    print("Melhor rota (primeiros 3):", best_route[:3])
