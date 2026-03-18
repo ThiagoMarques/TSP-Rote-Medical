@@ -9,6 +9,7 @@ CITIES = [
     (589, 131),  # 3
     (576, 216),  # 4
 ]
+city_to_id = {coord: i for i, coord in enumerate(CITIES)}
 
 HOSPITAL = CITIES[0]
 POPULATION_SIZE = 20
@@ -16,6 +17,12 @@ POPULATION_SIZE = 20
 N_GENERATIONS = 50
 MUTATION_PROB = 0.3
 TOP_FOR_SELECTION = 10
+
+# Prioridade por city_id (0=hospital não conta na penalidade; 1=crítico, 2=regular, 3=insumo)
+PRIORITIES = {0: 0, 1: 0, 2: 1, 3: 2, 4: 1}
+
+DEMANDS = {0: 0, 1: 3, 2: 2, 3: 1, 4: 2}
+VEHICLE_CAPACITY = 10
 
 def distance(city1, city2):
     """Distância em linha reta entre dois pontos (x, y)."""
@@ -25,7 +32,7 @@ def total_distance(path, start):
     """Distância total de um roteiro."""
     if not path:
         return 0.0
-    d = distance(path[-1], start)
+    d = distance(start, path[0])
     for i in range(len(path) - 1):
         d += distance(path[i], path[i + 1])
     d += distance(path[-1], start)
@@ -59,13 +66,43 @@ def mutate(route, prob):
         out[i], out[i + 1] = out[i + 1], out[i]
     return out
 
+def priority_penalty(route, city_to_id, priorities, hospital):
+    """Penalidade por atrasar entregas urgentes. Só consideramos as entregas (route)."""
+    total = 0.0
+    for i, city in enumerate(route):
+        cid = city_to_id.get(city)
+        if cid is None:
+            continue
+        prio = priorities.get(cid, 2)
+        weight = (3 - prio) ** 2
+        total += (i + 1) * weight
+    return total
+
+def fitness(route, city_to_id, priorities, hospital, w_dist=0.3, w_prio=0.7):
+    d = total_distance(route, hospital)
+    p = priority_penalty(route, city_to_id, priorities, hospital)
+    return w_dist * d + w_prio * p
+
+def capacity_penalty(route, city_to_id, demands, capacity):
+    total = sum(demands.get(city_to_id.get(c, -1), 0) for c in route)
+    return max(0.0, total - capacity)
+
+def fitness(route, city_to_id, priorities, demands, capacity, hospital,
+            w_dist=0.3, w_prio=0.5, w_cap=0.2):
+    d = total_distance(route, hospital)
+    p = priority_penalty(route, city_to_id, priorities, hospital)
+    c = capacity_penalty(route, city_to_id, demands, capacity)
+    print(f"Distância: {d:.2f}, Penalidade de prioridade: {p:.2f}, Penalidade de capacidade: {c:.2f}")
+    return w_dist * d + w_prio * p + w_cap * c
+
+
 if __name__ == "__main__":
     print("Cidades:", len(CITIES), "| População:", POPULATION_SIZE, "| Gerações:", N_GENERATIONS)
 
     population = [random_route() for _ in range(POPULATION_SIZE)]
 
     for gen in range(N_GENERATIONS):
-        fitness_list = [total_distance(r, HOSPITAL) for r in population]
+        fitness_list = [fitness(r, city_to_id, PRIORITIES, DEMANDS, VEHICLE_CAPACITY, HOSPITAL) for r in population]       
         sorted_pairs = sorted(zip(population, fitness_list), key=lambda p: p[1])
         population = [p[0] for p in sorted_pairs]
         fitness_list = [p[1] for p in sorted_pairs]
@@ -82,4 +119,4 @@ if __name__ == "__main__":
             new_pop.append(child)
         population = new_pop
 
-    print("Final:", total_distance(population[0], HOSPITAL))
+    print("Final:", fitness(population[0], city_to_id, PRIORITIES, DEMANDS, VEHICLE_CAPACITY, HOSPITAL))
