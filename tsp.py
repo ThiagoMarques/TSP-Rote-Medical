@@ -41,6 +41,16 @@ PRIORITIES = {0: 0, 1: 0, 2: 1, 3: 2, 4: 1}
 DEMANDS = {0: 0, 1: 3, 2: 2, 3: 1, 4: 2}
 VEHICLE_CAPACITY = 10
 
+def route_knn(cities, hospital):
+    rest = [c for c in cities if c != hospital]
+    route = []
+    current = hospital
+    while rest:
+        nearest = min(rest, key=lambda c: distance(current, c))
+        route.append(nearest)
+        rest.remove(nearest)
+        current = nearest
+    return route
 
 def total_distance_with_matrix(route, hospital, city_to_id, matrix):
     hid = city_to_id[hospital]
@@ -122,7 +132,7 @@ def fitness(route, city_to_id, priorities, demands, capacity, hospital,
 if __name__ == "__main__":
     print("Cidades:", len(CITIES), "| População:", POPULATION_SIZE, "| Gerações:", N_GENERATIONS)
 
-    population = [random_route() for _ in range(POPULATION_SIZE)]
+    population = [route_knn(CITIES, HOSPITAL)] + [random_route() for _ in range(POPULATION_SIZE - 1)]
 
     for gen in range(N_GENERATIONS):
         fitness_list = [fitness(r, city_to_id, PRIORITIES, DEMANDS, VEHICLE_CAPACITY, HOSPITAL) for r in population]       
